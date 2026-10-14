@@ -3,642 +3,957 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>러닝 크루 모임 & 마라톤 참가 관리</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>러닝 클럽 - 마라톤 대회 & 훈련 매니저</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { background-color: #0b1120; }
+    :root {
+      --bg-dark: #0b0f19;
+      --card-bg: #141c2e;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --accent-neon: #a3e635;
+      --accent-coral: #f43f5e;
+      --accent-amber: #f59e0b;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #24324f;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; padding: 20px 16px; }
+    .container { max-width: 860px; margin: 0 auto; }
+
+    /* 상단 헤더 */
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color);
+    }
+    .brand h1 { font-size: 1.45rem; font-weight: 800; color: var(--accent-neon); display: flex; align-items: center; gap: 8px; }
+    .brand p { font-size: 0.82rem; color: var(--text-muted); margin-top: 3px; }
+    
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-sync {
+      background: #1e293b; color: #cbd5e1; border: 1px solid var(--border-color);
+      padding: 9px 13px; border-radius: 9999px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    }
+    .btn-create {
+      background: linear-gradient(135deg, var(--accent-neon), var(--primary));
+      color: #052e16; font-weight: 700; font-size: 0.9rem; border: none;
+      padding: 9px 16px; border-radius: 9999px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 14px rgba(16,185,129,0.3);
+    }
+
+    /* 탭 메뉴 (대회 vs 훈련) */
+    .tab-bar {
+      display: flex; gap: 10px; margin-bottom: 18px; border-bottom: 2px solid var(--border-color);
+    }
+    .tab-btn {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 1rem; font-weight: 700; padding: 10px 18px; cursor: pointer;
+      position: relative; transition: all 0.2s;
+    }
+    .tab-btn.active { color: var(--accent-neon); }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: -2px; left: 0; right: 0;
+      height: 3px; background: var(--accent-neon); border-radius: 2px;
+    }
+
+    /* 상태 바 */
+    .sync-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #111a2e; border: 1px solid var(--border-color); border-radius: 8px;
+      padding: 8px 14px; margin-bottom: 18px; font-size: 0.82rem; color: var(--text-muted);
+    }
+    .sync-status { display: flex; align-items: center; gap: 8px; }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .sync-dot.online { background: var(--accent-neon); box-shadow: 0 0 8px var(--accent-neon); }
+    .sync-dot.loading { background: var(--accent-amber); animation: pulse 1s infinite alternate; }
+    @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+
+    /* ================= 캘린더 영역 ================= */
+    .calendar-container {
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      border-radius: var(--radius); padding: 18px; margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .calendar-title { font-size: 1.25rem; font-weight: 800; color: #fff; }
+    .calendar-nav { display: flex; gap: 6px; }
+    .calendar-nav button {
+      background: #1e293b; color: #cbd5e1; border: 1px solid var(--border-color);
+      padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+    }
+    .calendar-nav .btn-today { color: var(--accent-neon); border-color: rgba(163,230,53,0.4); }
+
+    .calendar-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--text-muted);
+      margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .weekday.sun { color: var(--accent-coral); }
+    .weekday.sat { color: #60a5fa; }
+
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .cal-cell {
+      min-height: 100px; background: #0e1627; border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 6px; cursor: pointer; display: flex; flex-direction: column;
+      transition: all 0.15s ease; overflow: hidden;
+    }
+    .cal-cell:hover { background: #18253f; border-color: #3b82f6; }
+    .cal-cell.other-month { opacity: 0.25; background: #070c16; }
+
+    .cal-cell.is-today { border: 1.5px solid #38bdf8; }
+    .cal-cell.is-today .cell-date { color: #38bdf8; font-weight: 800; }
+
+    .cal-cell.has-events {
+      background: linear-gradient(150deg, #12282d, #14233e);
+      border: 1.5px solid var(--accent-neon);
+      box-shadow: inset 0 0 10px rgba(163, 230, 53, 0.12);
+    }
+    .cal-cell.has-events .cell-date { color: var(--accent-neon); font-weight: 800; }
+    .cal-cell.selected { outline: 2px solid #fff; background: #1c2e4d !important; }
+
+    .cell-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .cell-date { font-size: 0.85rem; font-weight: 600; }
+    .cal-cell.sun .cell-date { color: var(--accent-coral); }
+    .cal-cell.sat .cell-date { color: #60a5fa; }
+
+    .event-badge-count {
+      font-size: 0.65rem; background: var(--accent-neon); color: #052e16;
+      font-weight: 800; border-radius: 9999px; padding: 1px 5px;
+    }
+
+    .race-chip-list { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+    .race-mini-chip {
+      background: rgba(16, 185, 129, 0.22);
+      border-left: 2.5px solid var(--accent-neon);
+      color: #f1f5f9; font-size: 0.68rem; font-weight: 600;
+      padding: 3px 4px; border-radius: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: block; width: 100%;
+    }
+
+    /* ================= 상세 리스트 영역 ================= */
+    .selected-date-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 24px 0 14px;
+    }
+    .selected-date-title { font-size: 1.18rem; font-weight: 700; color: #fff; }
+    .selected-date-count { font-size: 0.85rem; color: var(--accent-neon); font-weight: 600; }
+
+    .race-card {
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      border-radius: var(--radius); padding: 22px; margin-bottom: 22px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3); border-top: 3px solid var(--accent-neon);
+    }
+    .race-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 14px; gap: 10px;
+    }
+    .race-card-title { font-size: 1.25rem; font-weight: 800; color: #fff; }
+    .race-btn-link {
+      background: #1e293b; color: var(--accent-blue); border: 1px solid #334155;
+      padding: 5px 11px; border-radius: 6px; font-size: 0.78rem; text-decoration: none;
+      font-weight: 600; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .race-btn-link:hover { background: #334155; }
+
+    .meta-grid {
+      display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px;
+      background: rgba(0,0,0,0.22); padding: 14px; border-radius: 10px;
+    }
+    .meta-item { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: #cbd5e1; }
+    .meta-item strong { color: var(--text-muted); min-width: 65px; font-weight: 500; font-size: 0.82rem; }
+
+    /* 참가 등록 폼 */
+    .vote-panel {
+      background: #0d1526; border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 16px; margin-bottom: 20px;
+    }
+    .vote-panel h4 { font-size: 0.92rem; margin-bottom: 12px; color: #e2e8f0; }
+    .vote-inputs { display: flex; flex-direction: column; gap: 10px; }
+    .input-row { display: grid; grid-template-columns: 1.2fr 0.9fr 1fr; gap: 8px; }
+    .vote-inputs input, .vote-inputs select {
+      background: #1e293b; border: 1px solid #334155; color: #fff;
+      padding: 9px 12px; border-radius: 8px; font-size: 0.88rem; outline: none;
+    }
+    .btn-submit-vote {
+      background: var(--primary); color: #fff; font-weight: 700;
+      border: none; padding: 10px; border-radius: 8px; cursor: pointer;
+      font-size: 0.9rem; transition: background 0.2s;
+    }
+    .btn-submit-vote:hover { background: var(--primary-hover); }
+
+    /* ================= 참가자 / 불참자 전용 분리 영역 ================= */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .roster-section {
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      background: rgba(13, 21, 38, 0.6);
+    }
+    .roster-section.attend-box {
+      border-color: rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.04);
+    }
+    .roster-section.absent-box {
+      border-color: rgba(244, 63, 94, 0.35);
+      background: rgba(244, 63, 94, 0.04);
+    }
+
+    .roster-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .roster-title.attend { color: #34d399; }
+    .roster-title.absent { color: #fb7185; }
+
+    .roster-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .roster-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #111a2e;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 0.86rem;
+    }
+    .roster-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .roster-name { font-weight: 700; color: #fff; }
+    .course-tag {
+      background: rgba(163, 230, 53, 0.15);
+      border: 1px solid var(--accent-neon);
+      color: var(--accent-neon);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .roster-memo {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .btn-cancel {
+      background: none; border: 1px solid #475569; color: #94a3b8;
+      border-radius: 6px; padding: 3px 8px; font-size: 0.75rem; cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-cancel:hover { background: rgba(244,63,94,0.15); border-color: var(--accent-coral); color: var(--accent-coral); }
+
+    .empty-roster-msg {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 12px;
+      font-style: italic;
+    }
+
+    /* 대회 추가 모달 */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.75); display: none; justify-content: center;
+      align-items: center; z-index: 100; padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      width: 100%; max-width: 500px; border-radius: var(--radius); padding: 24px;
+    }
+    .modal-box h3 { font-size: 1.2rem; margin-bottom: 16px; color: #fff; }
+    .form-group { margin-bottom: 13px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+    .form-group input {
+      width: 100%; background: #0f172a; border: 1px solid var(--border-color);
+      color: #fff; padding: 9px 11px; border-radius: 8px; font-size: 0.88rem; outline: none;
+    }
+    .datetime-row { display: grid; grid-template-columns: 1.3fr 0.8fr 0.8fr; gap: 8px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-secondary { background: #334155; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: var(--primary); color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+    @media (min-width: 700px) {
+      .roster-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .input-row { grid-template-columns: 1fr; }
+      .cal-cell { min-height: 80px; padding: 4px; }
+      .datetime-row { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen py-8 px-4 flex justify-center">
+<body>
 
-  <div class="w-full max-w-xl space-y-6">
-    <!-- 헤더 -->
-    <header class="text-center space-y-1">
-      <h1 class="text-2xl font-bold tracking-tight text-white">러닝 크루 관리 시스템</h1>
-      <p class="text-xs text-slate-400">정기 모임 훈련 및 마라톤 대회 참가 현황 취합</p>
-    </header>
-
-    <!-- 탭 전환 버튼 -->
-    <div class="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
-      <button id="tabBtnSession" onclick="switchTab('session')" class="w-1/2 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition-all">
-        정기 훈련 모임
-      </button>
-      <button id="tabBtnRace" onclick="switchTab('race')" class="w-1/2 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all">
-        🏃 마라톤 대회 참가 취합
-      </button>
+<div class="container">
+  <header>
+    <div class="brand">
+      <h1>🏃‍♂️ PACER RUNNING CLUB</h1>
+      <p>구글 스프레드시트 연동 마라톤 대회 & 정기 훈련 매니저</p>
     </div>
+    <div class="header-actions">
+      <button class="btn-sync" onclick="loadData()">🔄 새로고침</button>
+      <button class="btn-create" onclick="openCreateModal()">+ 새 일정 등록</button>
+    </div>
+  </header>
 
-    <!-- ======================================================== -->
-    <!-- [SECTION 1] 정기 모임 뷰 -->
-    <!-- ======================================================== -->
-    <section id="sectionSession" class="space-y-6">
-      <!-- 세션 선택 카드 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-        <div class="flex items-center justify-between gap-3">
-          <label class="text-xs font-semibold text-slate-300 shrink-0">선택된 모임</label>
-          <select id="sessionSelect" onchange="handleSessionChange()" class="w-full bg-slate-800 text-slate-200 border border-slate-700 text-xs rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
-            <option value="">모임을 불러오는 중...</option>
-          </select>
-        </div>
-
-        <div id="sessionDetail" class="bg-slate-950/60 rounded-xl p-3.5 border border-slate-800/80 text-xs space-y-1.5 hidden">
-          <div class="flex justify-between"><span class="text-slate-400">일시:</span> <span id="dtField" class="font-medium text-slate-200">-</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">장소:</span> <span id="locField" class="font-medium text-slate-200">-</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">페이스:</span> <span id="paceField" class="font-medium text-slate-200">-</span></div>
-          <div class="pt-1 border-t border-slate-800 text-slate-400"><span id="noticeField">-</span></div>
-        </div>
-      </div>
-
-      <!-- 모임 참석 투표 입력 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-        <h2 class="text-sm font-bold text-slate-200">모임 참석 여부 등록</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <input type="text" id="voteName" placeholder="이름" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500">
-          <select id="voteStatus" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-            <option value="참석">참석</option>
-            <option value="불참">불참</option>
-            <option value="미정">미정</option>
-          </select>
-          <input type="text" id="voteMemo" placeholder="메모 (선택)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-indigo-500">
-        </div>
-        <button onclick="submitVote()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs py-2.5 rounded-lg transition-colors">
-          모임 참석 등록하기
-        </button>
-      </div>
-
-      <!-- 모임 참석 현황 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-bold text-slate-200">모임 참석자 명단</h2>
-          <button onclick="fetchData()" class="text-[11px] text-slate-400 hover:text-indigo-400">새로고침</button>
-        </div>
-        <div id="attendeeStatusContainer" class="space-y-3 pt-1"></div>
-      </div>
-    </section>
-
-    <!-- ======================================================== -->
-    <!-- [SECTION 2] 마라톤 대회 뷰 -->
-    <!-- ======================================================== -->
-    <section id="sectionRace" class="space-y-6 hidden">
-      <!-- 2-1. 마라톤 대회 신규 등록 아코디언 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-        <div class="flex items-center justify-between cursor-pointer" onclick="toggleRaceForm()">
-          <h2 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
-            <span>➕</span> 신규 마라톤 대회 등록하기
-          </h2>
-          <span id="raceFormToggleIcon" class="text-xs text-slate-400 font-bold">펼치기 ▼</span>
-        </div>
-
-        <div id="raceFormBody" class="space-y-2.5 pt-2 hidden">
-          <div>
-            <label class="text-[11px] text-slate-400">대회명</label>
-            <input type="text" id="newRaceTitle" placeholder="예: 2026 서울 JTBC 마라톤" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <label class="text-[11px] text-slate-400">대회 일시</label>
-              <input type="text" id="newRaceDateTime" placeholder="예: 2026-11-01 08:00" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400">대회 장소</label>
-              <input type="text" id="newRaceLocation" placeholder="예: 상암 월드컵경기장" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <label class="text-[11px] text-slate-400">개설 코스 (쉼표 구분)</label>
-              <input type="text" id="newRaceCourse" placeholder="예: 풀코스, 10km, 5km" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400">참가비</label>
-              <input type="text" id="newRaceFee" placeholder="예: 풀 80,000원 / 10K 60,000원" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-            </div>
-          </div>
-          <div>
-            <label class="text-[11px] text-slate-400">공식 홈페이지 URL</label>
-            <input type="url" id="newRaceHomepage" placeholder="https://..." class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-          </div>
-          <button onclick="submitNewRace()" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs py-2.5 rounded-lg transition-colors">
-            대회 등록 완료
-          </button>
-        </div>
-      </div>
-
-      <!-- 2-2. 대회 선택 및 정보 카드 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-        <div class="flex items-center justify-between gap-3">
-          <label class="text-xs font-semibold text-slate-300 shrink-0">마라톤 대회 선택</label>
-          <select id="raceSelect" onchange="handleRaceChange()" class="w-full bg-slate-800 text-slate-200 border border-slate-700 text-xs rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
-            <option value="">대회를 불러오는 중...</option>
-          </select>
-        </div>
-
-        <div id="raceDetail" class="bg-slate-950/60 rounded-xl p-3.5 border border-slate-800/80 text-xs space-y-2 hidden">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-400">홈페이지:</span>
-            <a id="raceHomeLink" href="#" target="_blank" class="text-indigo-400 hover:underline flex items-center gap-1 font-medium">
-              공식 접수처 바로가기 ↗
-            </a>
-          </div>
-          <div class="flex justify-between"><span class="text-slate-400">대회일시:</span> <span id="raceDtField" class="font-medium text-slate-200">-</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">대회장소:</span> <span id="raceLocField" class="font-medium text-slate-200">-</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">코스 종류:</span> <span id="raceCourseField" class="font-medium text-slate-200">-</span></div>
-          <div class="flex justify-between"><span class="text-slate-400">참가비:</span> <span id="raceFeeField" class="font-medium text-amber-400">-</span></div>
-        </div>
-      </div>
-
-      <!-- 2-3. 대회 참가 여부 등록 -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-        <h2 class="text-sm font-bold text-slate-200">대회 참가 여부 투표</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input type="text" id="raceVoteName" placeholder="이름" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-          <select id="raceVoteStatus" onchange="toggleCourseInput()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-            <option value="참가">참가</option>
-            <option value="불참">불참</option>
-            <option value="미정">미정</option>
-          </select>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input type="text" id="raceSelectedCourse" placeholder="신청 코스 (예: 10km, Full)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-          <input type="text" id="raceVoteMemo" placeholder="메모 (목표 기록, 비고 등)" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 outline-none focus:border-indigo-500">
-        </div>
-        <button onclick="submitRaceVote()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs py-2.5 rounded-lg transition-colors">
-          참가 정보 등록하기
-        </button>
-      </div>
-
-      <!-- 2-4. 대회 참가 현황 (참가 / 불참 / 미정 한 필드 내 연속 나열 & 인라인 수정) -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-bold text-slate-200">대회 참가자 명단 현황</h2>
-          <button onclick="fetchData()" class="text-[11px] text-slate-400 hover:text-indigo-400">새로고침</button>
-        </div>
-        <div id="raceAttendeeContainer" class="space-y-3 pt-1"></div>
-      </div>
-    </section>
+  <!-- 기능 선택 탭 (대회 vs 훈련) -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabRaces" onclick="switchTab('races')">🏅 마라톤 대회 참가 등록</button>
+    <button class="tab-btn" id="tabSessions" onclick="switchTab('sessions')">🏃‍♂️ 정기 훈련 모임</button>
   </div>
 
-  <script>
-    // 본인의 Apps Script 웹 앱 배포 URL을 입력하세요.
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyKBLzKSadzOywM2QhSeei0RDraphdgen4pv2WCS9jXMS72RXAmbVg5Ui1IdKuKfUAK/exec";
+  <!-- 동기화 상태 바 -->
+  <div class="sync-bar">
+    <div class="sync-status">
+      <div class="sync-dot loading" id="syncDot"></div>
+      <span id="syncText">스프레드시트 연결 중...</span>
+    </div>
+    <span id="syncTime"></span>
+  </div>
 
-    let globalData = {
-      sessions: [],
-      attendees: [],
-      races: [],
-      raceAttendees: []
+  <!-- 1. 월간 달력 -->
+  <section class="calendar-container">
+    <div class="calendar-header">
+      <div class="calendar-title" id="currentMonthLabel">달력 불러오는 중...</div>
+      <div class="calendar-nav">
+        <button onclick="changeMonth(-1)">◀ 이전달</button>
+        <button class="btn-today" onclick="goToday()">오늘</button>
+        <button onclick="changeMonth(1)">다음달 ▶</button>
+      </div>
+    </div>
+
+    <div class="calendar-weekdays">
+      <div class="weekday sun">일</div>
+      <div class="weekday">월</div>
+      <div class="weekday">화</div>
+      <div class="weekday">수</div>
+      <div class="weekday">목</div>
+      <div class="weekday">금</div>
+      <div class="weekday sat">토</div>
+    </div>
+
+    <div class="calendar-grid" id="calendarGrid">
+      <!-- 달력 셀 동적 렌더링 -->
+    </div>
+  </section>
+
+  <!-- 2. 선택된 날짜 상세 목록 (동일 날짜 복수 일정 순차 나열) -->
+  <section id="detailSection">
+    <div class="selected-date-header">
+      <div class="selected-date-title" id="selectedDateTitle">📅 날짜를 선택해 주세요</div>
+      <div class="selected-date-count" id="selectedDateCount"></div>
+    </div>
+
+    <div id="cardsContainer">
+      <!-- 선택된 날짜의 대회/모임 목록 -->
+    </div>
+  </section>
+</div>
+
+<!-- 대회 등록 모달 -->
+<div class="modal-overlay" id="createRaceModal">
+  <div class="modal-box">
+    <h3>새 마라톤 대회 등록</h3>
+    <form id="createRaceForm" onsubmit="handleCreateRace(event)">
+      <div class="form-group">
+        <label>대회명</label>
+        <input type="text" id="newRaceTitle" placeholder="예: 2026 서울 라이프마라톤" required>
+      </div>
+      <div class="form-group">
+        <label>대회 개최 일시</label>
+        <div class="datetime-row">
+          <input type="date" id="newRaceDate" required>
+          <select id="newRaceHour" required style="background:#0f172a; border:1px solid var(--border-color); color:#fff; border-radius:8px; padding:8px;"></select>
+          <select id="newRaceMinute" required style="background:#0f172a; border:1px solid var(--border-color); color:#fff; border-radius:8px; padding:8px;">
+            <option value="00">00분</option><option value="30">30분</option><option value="40">40분</option><option value="50">50분</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>개최 장소</label>
+        <input type="text" id="newRaceLocation" placeholder="예: 상암 평화의공원 평화광장" required>
+      </div>
+      <div class="form-group">
+        <label>종목/코스 (쉼표 구분)</label>
+        <input type="text" id="newRaceCourse" placeholder="예: 풀코스, 하프코스, 10km, 5km" required>
+      </div>
+      <div class="form-group">
+        <label>참가비 안내</label>
+        <input type="text" id="newRaceFee" placeholder="예: 하프 50,000원 / 10K 45,000원">
+      </div>
+      <div class="form-group">
+        <label>대회 공식 홈페이지 URL</label>
+        <input type="url" id="newRaceHomepage" placeholder="https://...">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeCreateModal()">취소</button>
+        <button type="submit" class="btn-primary" id="btnSaveRace">스프레드시트에 등록</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz47w3Sw6kFAnCTZNfA0kptkkWiPuTtrCvVIYQ8x2oPN_1kAldaAF7GJQswgU-iJkqP/exec";
+
+  let currentTab = 'races'; // 'races' or 'sessions'
+  let state = {
+    races: [],
+    raceAttendees: [],
+    sessions: [],
+    attendees: []
+  };
+
+  let currentNavDate = new Date();
+  let selectedDateStr = formatDateKey(new Date());
+
+  function formatDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function parseDateKey(dtString) {
+    if (!dtString) return '';
+    const clean = String(dtString).trim();
+    if (clean.length >= 10 && clean.includes('-')) {
+      return clean.substring(0, 10);
+    }
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) return formatDateKey(d);
+    return '';
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabRaces').classList.toggle('active', tab === 'races');
+    document.getElementById('tabSessions').classList.toggle('active', tab === 'sessions');
+    renderCalendar();
+    renderSelectedDateDetails();
+  }
+
+  async function loadData() {
+    const dot = document.getElementById('syncDot');
+    const text = document.getElementById('syncText');
+    const timeSpan = document.getElementById('syncTime');
+
+    dot.className = 'sync-dot loading';
+    text.textContent = '스프레드시트와 실시간 동기화 중...';
+
+    try {
+      const response = await fetch(GAS_API_URL);
+      const data = await response.json();
+      state.races = data.races || [];
+      state.raceAttendees = data.raceAttendees || [];
+      state.sessions = data.sessions || [];
+      state.attendees = data.attendees || [];
+
+      dot.className = 'sync-dot online';
+      text.textContent = `동기화 완료 (대회 ${state.races.length}개 / 훈련 ${state.sessions.length}회)`;
+      timeSpan.textContent = new Date().toLocaleTimeString('ko-KR');
+
+      if (currentTab === 'races' && state.races.length > 0) {
+        const raceDates = state.races.map(r => parseDateKey(r.dateTime)).filter(Boolean).sort();
+        const todayStr = formatDateKey(new Date());
+        const upcoming = raceDates.find(d => d >= todayStr);
+        if (upcoming) {
+          selectedDateStr = upcoming;
+          const [sy, sm] = upcoming.split('-');
+          currentNavDate = new Date(parseInt(sy, 10), parseInt(sm, 10) - 1, 1);
+        }
+      }
+
+      renderCalendar();
+      renderSelectedDateDetails();
+    } catch (err) {
+      console.warn('동기화 오류:', err);
+      dot.className = 'sync-dot';
+      dot.style.background = 'var(--accent-coral)';
+      text.textContent = '스프레드시트 응답 대기 중';
+      renderCalendar();
+      renderSelectedDateDetails();
+    }
+  }
+
+  function getItemsMap() {
+    const map = {};
+    const list = currentTab === 'races' ? state.races : state.sessions;
+    list.forEach(item => {
+      const key = parseDateKey(item.dateTime);
+      if (key) {
+        if (!map[key]) map[key] = [];
+        map[key].push(item);
+      }
+    });
+    return map;
+  }
+
+  function renderCalendar() {
+    const year = currentNavDate.getFullYear();
+    const month = currentNavDate.getMonth();
+    document.getElementById('currentMonthLabel').textContent = `${year}년 ${month + 1}월`;
+
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const prevLastDate = new Date(year, month, 0).getDate();
+    const todayStr = formatDateKey(new Date());
+    const itemsMap = getItemsMap();
+
+    for (let i = firstDay; i > 0; i--) {
+      const d = prevLastDate - i + 1;
+      const prevDate = new Date(year, month - 1, d);
+      grid.appendChild(createCell(d, formatDateKey(prevDate), true, prevDate.getDay(), todayStr, itemsMap));
+    }
+    for (let d = 1; d <= lastDate; d++) {
+      const thisDate = new Date(year, month, d);
+      grid.appendChild(createCell(d, formatDateKey(thisDate), false, thisDate.getDay(), todayStr, itemsMap));
+    }
+    const totalCells = firstDay + lastDate;
+    const nextDays = (7 - (totalCells % 7)) % 7;
+    for (let d = 1; d <= nextDays; d++) {
+      const nextDate = new Date(year, month + 1, d);
+      grid.appendChild(createCell(d, formatDateKey(nextDate), true, nextDate.getDay(), todayStr, itemsMap));
+    }
+  }
+
+  function createCell(dayNum, dateKey, isOtherMonth, dayOfWeek, todayStr, itemsMap) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    if (isOtherMonth) cell.classList.add('other-month');
+    if (dayOfWeek === 0) cell.classList.add('sun');
+    if (dayOfWeek === 6) cell.classList.add('sat');
+    if (dateKey === todayStr) cell.classList.add('is-today');
+    if (dateKey === selectedDateStr) cell.classList.add('selected');
+
+    const dayItems = itemsMap[dateKey] || [];
+    if (dayItems.length > 0) cell.classList.add('has-events');
+
+    let badgeHtml = dayItems.length > 0 ? `<span class="event-badge-count">${dayItems.length}</span>` : '';
+    
+    let chipsHtml = '';
+    if (dayItems.length > 0) {
+      chipsHtml = `<div class="race-chip-list">` +
+        dayItems.map(item => `
+          <div class="race-mini-chip" title="${escapeHtml(item.title)}">
+            ${currentTab === 'races' ? '🏅' : '🏃'} ${escapeHtml(item.title)}
+          </div>
+        `).join('') +
+      `</div>`;
+    }
+
+    cell.innerHTML = `
+      <div class="cell-top">
+        <span class="cell-date">${dayNum}</span>
+        ${badgeHtml}
+      </div>
+      ${chipsHtml}
+    `;
+
+    cell.onclick = () => {
+      selectedDateStr = dateKey;
+      renderCalendar();
+      renderSelectedDateDetails();
     };
 
-    window.addEventListener("DOMContentLoaded", () => {
-      fetchData();
+    return cell;
+  }
+
+  // 선택된 날짜 상세 렌더링 (참가자 영역 / 불참자 영역 분리)
+  function renderSelectedDateDetails() {
+    const container = document.getElementById('cardsContainer');
+    const headerTitle = document.getElementById('selectedDateTitle');
+    const headerCount = document.getElementById('selectedDateCount');
+
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const dateFormatted = dateObj.toLocaleDateString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     });
 
-    // 탭 전환
-    function switchTab(type) {
-      const isSession = type === 'session';
-      document.getElementById("sectionSession").classList.toggle("hidden", !isSession);
-      document.getElementById("sectionRace").classList.toggle("hidden", isSession);
+    const isRaceMode = currentTab === 'races';
+    headerTitle.innerHTML = `📅 <strong>${dateFormatted}</strong> ${isRaceMode ? '마라톤 대회' : '정기 훈련'} 목록`;
 
-      const btnS = document.getElementById("tabBtnSession");
-      const btnR = document.getElementById("tabBtnRace");
+    const itemsMap = getItemsMap();
+    const dayItems = itemsMap[selectedDateStr] || [];
+    headerCount.textContent = `등록된 ${isRaceMode ? '대회' : '모임'}: ${dayItems.length}건`;
 
-      if (isSession) {
-        btnS.className = "w-1/2 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition-all";
-        btnR.className = "w-1/2 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all";
-      } else {
-        btnS.className = "w-1/2 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all";
-        btnR.className = "w-1/2 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition-all";
-      }
+    if (dayItems.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px 16px; color: var(--text-muted); background: var(--card-bg); border-radius: var(--radius); border: 1px dashed var(--border-color);">
+          이 날짜에는 등록된 ${isRaceMode ? '마라톤 대회가' : '정기 훈련 모임이'} 없습니다.<br>
+          <button class="btn-create" style="margin: 14px auto 0; font-size: 0.85rem;" onclick="openCreateModal('${selectedDateStr}')">+ 이 날짜에 새 일정 등록</button>
+        </div>
+      `;
+      return;
     }
 
-    function toggleRaceForm() {
-      const body = document.getElementById("raceFormBody");
-      const icon = document.getElementById("raceFormToggleIcon");
-      const isHidden = body.classList.contains("hidden");
-      body.classList.toggle("hidden", !isHidden);
-      icon.textContent = isHidden ? "접기 ▲" : "펼치기 ▼";
-    }
+    if (isRaceMode) {
+      // 대회 렌더링
+      container.innerHTML = dayItems.map((race, idx) => {
+        const attendees = state.raceAttendees.filter(a => String(a.raceId) === String(race.id));
+        const attendList = attendees.filter(a => a.status === '참가' || a.status === 'attend');
+        const absentList = attendees.filter(a => a.status === '불참' || a.status === 'absent');
+        const courses = (race.course || '하프코스, 10km').split(',').map(c => c.trim());
 
-    function toggleCourseInput() {
-      const status = document.getElementById("raceVoteStatus").value;
-      const courseInput = document.getElementById("raceSelectedCourse");
-      if (status === '불참') {
-        courseInput.value = '';
-        courseInput.disabled = true;
-        courseInput.placeholder = '불참 (코스 선택 안 함)';
-      } else {
-        courseInput.disabled = false;
-        courseInput.placeholder = '신청 코스 (예: 10km, Full)';
-      }
-    }
-
-    // 데이터 조회 (GET)
-    async function fetchData() {
-      try {
-        const res = await fetch(GAS_WEB_APP_URL);
-        const data = await res.json();
-        if (data.success) {
-          globalData = data;
-          populateSessionDropdown();
-          populateRaceDropdown();
-          renderAttendees();
-          renderRaceAttendees();
-        } else {
-          alert("데이터 로드 실패: " + (data.message || data.error));
-        }
-      } catch (err) {
-        console.error("데이터 로드 오류:", err);
-      }
-    }
-
-    // ========================================================
-    // [RACES] 마라톤 대회 핸들러 및 렌더링
-    // ========================================================
-    function populateRaceDropdown() {
-      const select = document.getElementById("raceSelect");
-      const races = globalData.races || [];
-      if (races.length === 0) {
-        select.innerHTML = '<option value="">등록된 마라톤 대회가 없습니다.</option>';
-        return;
-      }
-
-      const prev = select.value;
-      select.innerHTML = races.map(r => `
-        <option value="${escapeHtml(r.id)}">${escapeHtml(r.title)} (${escapeHtml(r.dateTime.substring(0, 10))})</option>
-      `).join('');
-
-      if (prev && races.some(r => r.id === prev)) {
-        select.value = prev;
-      }
-      handleRaceChange();
-    }
-
-    function handleRaceChange() {
-      const raceId = document.getElementById("raceSelect").value;
-      const race = (globalData.races || []).find(r => r.id === raceId);
-      const detailBox = document.getElementById("raceDetail");
-
-      if (race) {
-        const homeLink = document.getElementById("raceHomeLink");
-        if (race.homepage) {
-          homeLink.href = race.homepage;
-          homeLink.classList.remove("hidden");
-        } else {
-          homeLink.classList.add("hidden");
-        }
-
-        document.getElementById("raceDtField").textContent = race.dateTime;
-        document.getElementById("raceLocField").textContent = race.location;
-        document.getElementById("raceCourseField").textContent = race.course;
-        document.getElementById("raceFeeField").textContent = race.fee;
-        detailBox.classList.remove("hidden");
-      } else {
-        detailBox.classList.add("hidden");
-      }
-
-      renderRaceAttendees();
-    }
-
-    // 마라톤 참가 현황 렌더링 (참가, 불참, 미정 연속 나열 & 인라인 수정)
-    function renderRaceAttendees() {
-      const container = document.getElementById("raceAttendeeContainer");
-      const currentRaceId = document.getElementById("raceSelect").value;
-
-      if (!currentRaceId) {
-        container.innerHTML = '<div class="text-center py-4 text-xs text-slate-500">선택된 대회가 없습니다.</div>';
-        return;
-      }
-
-      const list = (globalData.raceAttendees || []).filter(a => String(a.raceId) === String(currentRaceId));
-
-      const groups = {
-        '참가': list.filter(a => a.status === '참가'),
-        '불참': list.filter(a => a.status === '불참'),
-        '미정': list.filter(a => a.status === '미정')
-      };
-
-      const styleConfig = {
-        '참가': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-        '불참': { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/30' },
-        '미정': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' }
-      };
-
-      let html = '';
-
-      ['참가', '불참', '미정'].forEach(statusKey => {
-        const members = groups[statusKey];
-        const style = styleConfig[statusKey];
-
-        html += `
-          <div class="bg-slate-950/50 rounded-xl p-3.5 border border-slate-800">
-            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80">
-              <span class="text-xs font-bold px-2 py-0.5 rounded ${style.bg} ${style.text} border ${style.border}">
-                ${statusKey} (${members.length}명)
-              </span>
+        return `
+          <div class="race-card">
+            <div class="race-card-header">
+              <div>
+                <span style="font-size:0.75rem; color:var(--accent-neon); font-weight:700;">대회 #${idx + 1}</span>
+                <h2 class="race-card-title">${escapeHtml(race.title)}</h2>
+              </div>
+              ${race.homepage ? `<a href="${race.homepage}" target="_blank" class="race-btn-link">🌐 대회 공식 홈페이지 ↗</a>` : ''}
             </div>
 
-            <!-- 연속 나열 목록 -->
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-              ${members.length === 0 
-                ? `<span class="text-[11px] text-slate-500 italic">등록된 인원이 없습니다.</span>` 
-                : members.map((m, idx) => `
-                    <div class="inline-flex items-center bg-slate-800/90 border border-slate-700/80 rounded-lg px-2 py-1 gap-1.5">
-                      <span class="font-medium text-slate-200">${escapeHtml(m.name)}</span>${m.selectedCourse ? `<span class="text-[10px] text-indigo-400 font-semibold">[${escapeHtml(m.selectedCourse)}]</span>` : ''}
-                      ${m.memo ? `<span class="text-[10px] text-slate-400">(${escapeHtml(m.memo)})</span>` : ''}
+            <div class="meta-grid">
+              <div class="meta-item"><strong>일시</strong> ⏰ ${escapeHtml(race.dateTime)}</div>
+              <div class="meta-item"><strong>개최 장소</strong> 📍 ${escapeHtml(race.location)}</div>
+              <div class="meta-item"><strong>참가 종목</strong> 🎽 ${escapeHtml(race.course)}</div>
+              ${race.fee ? `<div class="meta-item"><strong>참가비</strong> 💳 ${escapeHtml(race.fee)}</div>` : ''}
+            </div>
 
-                      <!-- 인라인 상태 수정 셀렉터 -->
-                      <select 
-                        onchange="updateRaceStatus('${escapeHtml(currentRaceId)}', '${escapeHtml(m.name)}', this.value, '${escapeHtml(m.selectedCourse)}', '${escapeHtml(m.memo)}')" 
-                        class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] rounded px-1 py-0.5 border-none outline-none cursor-pointer"
-                      >
-                        <option value="참가" ${m.status === '참가' ? 'selected' : ''}>참가</option>
-                        <option value="불참" ${m.status === '불참' ? 'selected' : ''}>불참</option>
-                        <option value="미정" ${m.status === '미정' ? 'selected' : ''}>미정</option>
-                      </select>
+            <!-- 참가 신청/변경 폼 -->
+            <div class="vote-panel">
+              <h4>내 대회 참가 등록 / 변경</h4>
+              <div class="vote-inputs">
+                <div class="input-row">
+                  <input type="text" id="name-${race.id}" placeholder="이름 (닉네임)" required>
+                  <select id="course-${race.id}">
+                    ${courses.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+                  </select>
+                  <select id="status-${race.id}">
+                    <option value="참가">🏃 참가</option>
+                    <option value="불참">👋 불참</option>
+                  </select>
+                </div>
+                <input type="text" id="memo-${race.id}" placeholder="목표 기록 및 메모 (예: 1시간 45분 완주 목표)">
+                <button class="btn-submit-vote" onclick="submitRaceVote('${race.id}')">대회 참가 정보 저장</button>
+              </div>
+            </div>
 
-                      <!-- 취소(삭제) 버튼 -->
-                      <button 
-                        onclick="cancelRaceAttendee('${escapeHtml(currentRaceId)}', '${escapeHtml(m.name)}')" 
-                        class="text-[11px] text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded px-1 transition-colors"
-                        title="등록 취소"
-                      >
-                        ✕
-                      </button>
+            <!-- ★ 참가자 영역과 불참자 영역 분리 필드 ★ -->
+            <div class="roster-grid">
+              <!-- 1. 참가자 영역 -->
+              <div class="roster-section attend-box">
+                <div class="roster-title attend">
+                  <span>🏃 참가자 명단</span>
+                  <span>${attendList.length}명</span>
+                </div>
+                <div class="roster-list">
+                  ${attendList.length === 0 ? `<div class="empty-roster-msg">등록된 참가자가 없습니다.</div>` : ''}
+                  ${attendList.map(a => `
+                    <div class="roster-item">
+                      <div class="roster-left">
+                        <span class="roster-name">${escapeHtml(a.name)}</span>${a.selectedCourse ? `<span class="course-tag">${escapeHtml(a.selectedCourse)}</span>` : ''}
+                        ${a.memo ? `<span class="roster-memo">"${escapeHtml(a.memo)}"</span>` : ''}
+                      </div>
+                      <button class="btn-cancel" onclick="cancelRaceVote('${race.id}', '${escapeHtml(a.name)}')">취소</button>
                     </div>
-                    ${idx < members.length - 1 ? `<span class="text-slate-600">,</span>` : ''}
-                  `).join('')
-              }
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- 2. 불참자 영역 -->
+              <div class="roster-section absent-box">
+                <div class="roster-title absent">
+                  <span>👋 불참자 명단</span>
+                  <span>${absentList.length}명</span>
+                </div>
+                <div class="roster-list">
+                  ${absentList.length === 0 ? `<div class="empty-roster-msg">등록된 불참자가 없습니다.</div>` : ''}
+                  ${absentList.map(a => `
+                    <div class="roster-item">
+                      <div class="roster-left">
+                        <span class="roster-name">${escapeHtml(a.name)}</span>${a.memo ? `<span class="roster-memo">"${escapeHtml(a.memo)}"</span>` : ''}
+                      </div>
+                      <button class="btn-cancel" onclick="cancelRaceVote('${race.id}', '${escapeHtml(a.name)}')">취소</button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
             </div>
+
           </div>
         `;
-      });
+      }).join('');
+    } else {
+      // 훈련 모임 렌더링
+      container.innerHTML = dayItems.map(session => {
+        const attendees = state.attendees.filter(a => String(a.sessionId) === String(session.id));
+        const attendList = attendees.filter(a => a.status === 'attend' || a.status === '참석' || a.status === '참가');
+        const absentList = attendees.filter(a => a.status === 'absent' || a.status === '불참');
 
-      container.innerHTML = html;
-    }
-
-    // 신규 마라톤 등록
-    async function submitNewRace() {
-      const title = document.getElementById("newRaceTitle").value.trim();
-      const dateTime = document.getElementById("newRaceDateTime").value.trim();
-      const location = document.getElementById("newRaceLocation").value.trim();
-      const course = document.getElementById("newRaceCourse").value.trim();
-      const fee = document.getElementById("newRaceFee").value.trim();
-      const homepage = document.getElementById("newRaceHomepage").value.trim();
-
-      if (!title) {
-        alert("대회명을 입력해 주세요.");
-        return;
-      }
-
-      const raceId = "race_" + Date.now();
-
-      await sendGASRequest({
-        action: "createRace",
-        race: {
-          id: raceId,
-          title: title,
-          dateTime: dateTime,
-          location: location,
-          course: course,
-          fee: fee,
-          homepage: homepage
-        }
-      });
-
-      // 입력창 초기화
-      document.getElementById("newRaceTitle").value = '';
-      document.getElementById("newRaceDateTime").value = '';
-      document.getElementById("newRaceLocation").value = '';
-      document.getElementById("newRaceCourse").value = '';
-      document.getElementById("newRaceFee").value = '';
-      document.getElementById("newRaceHomepage").value = '';
-      toggleRaceForm();
-    }
-
-    // 마라톤 참가 투표
-    async function submitRaceVote() {
-      const raceId = document.getElementById("raceSelect").value;
-      const name = document.getElementById("raceVoteName").value.trim();
-      const status = document.getElementById("raceVoteStatus").value;
-      const selectedCourse = document.getElementById("raceSelectedCourse").value.trim();
-      const memo = document.getElementById("raceVoteMemo").value.trim();
-
-      if (!raceId) {
-        alert("선택된 마라톤 대회가 없습니다.");
-        return;
-      }
-      if (!name) {
-        alert("이름을 입력해 주세요.");
-        return;
-      }
-
-      await sendGASRequest({
-        action: "voteRaceAttendee",
-        raceId: raceId,
-        name: name,
-        status: status,
-        selectedCourse: selectedCourse,
-        memo: memo
-      });
-
-      document.getElementById("raceVoteName").value = '';
-      document.getElementById("raceVoteMemo").value = '';
-      document.getElementById("raceSelectedCourse").value = '';
-    }
-
-    // 마라톤 상태 수정
-    async function updateRaceStatus(raceId, name, newStatus, currentCourse, currentMemo) {
-      if (!confirm(`[${name}]님의 상태를 '${newStatus}'(으)로 변경하시겠습니까?`)) {
-        renderRaceAttendees();
-        return;
-      }
-
-      await sendGASRequest({
-        action: "voteRaceAttendee",
-        raceId: raceId,
-        name: name,
-        status: newStatus,
-        selectedCourse: newStatus === '불참' ? '' : currentCourse,
-        memo: currentMemo
-      });
-    }
-
-    // 마라톤 참가 취소
-    async function cancelRaceAttendee(raceId, name) {
-      if (!confirm(`[${name}]님의 참가 신청 정보를 삭제하시겠습니까?`)) {
-        return;
-      }
-
-      await sendGASRequest({
-        action: "cancelRaceAttendee",
-        raceId: raceId,
-        name: name
-      });
-    }
-
-    // ========================================================
-    // [SESSIONS] 정기 모임 관련 로직 (기존 유지)
-    // ========================================================
-    function populateSessionDropdown() {
-      const select = document.getElementById("sessionSelect");
-      const sessions = globalData.sessions || [];
-      if (sessions.length === 0) {
-        select.innerHTML = '<option value="">등록된 모임이 없습니다.</option>';
-        return;
-      }
-      const prev = select.value;
-      select.innerHTML = sessions.map(s => `
-        <option value="${escapeHtml(s.id)}">${escapeHtml(s.title)} (${escapeHtml(s.dateTime.substring(0, 10))})</option>
-      `).join('');
-
-      if (prev && sessions.some(s => s.id === prev)) {
-        select.value = prev;
-      }
-      handleSessionChange();
-    }
-
-    function handleSessionChange() {
-      const select = document.getElementById("sessionSelect");
-      const session = (globalData.sessions || []).find(s => s.id === select.value);
-      const detailBox = document.getElementById("sessionDetail");
-
-      if (session) {
-        document.getElementById("dtField").textContent = session.dateTime;
-        document.getElementById("locField").textContent = session.location;
-        document.getElementById("paceField").textContent = session.pace;
-        document.getElementById("noticeField").textContent = session.notice ? `공지: ${session.notice}` : '공지 없음';
-        detailBox.classList.remove("hidden");
-      } else {
-        detailBox.classList.add("hidden");
-      }
-      renderAttendees();
-    }
-
-    function renderAttendees() {
-      const container = document.getElementById("attendeeStatusContainer");
-      const currentId = document.getElementById("sessionSelect").value;
-      if (!currentId) {
-        container.innerHTML = '<div class="text-center py-4 text-xs text-slate-500">선택된 모임이 없습니다.</div>';
-        return;
-      }
-      const list = (globalData.attendees || []).filter(a => String(a.sessionId) === String(currentId));
-      const groups = {
-        '참석': list.filter(a => a.status === '참석'),
-        '불참': list.filter(a => a.status === '불참'),
-        '미정': list.filter(a => a.status === '미정')
-      };
-      const styleConfig = {
-        '참석': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-        '불참': { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/30' },
-        '미정': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' }
-      };
-
-      let html = '';
-      ['참석', '불참', '미정'].forEach(statusKey => {
-        const members = groups[statusKey];
-        const style = styleConfig[statusKey];
-        html += `
-          <div class="bg-slate-950/50 rounded-xl p-3.5 border border-slate-800">
-            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80">
-              <span class="text-xs font-bold px-2 py-0.5 rounded ${style.bg} ${style.text} border ${style.border}">
-                ${statusKey} (${members.length}명)
-              </span>
-            </div>
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-              ${members.length === 0 
-                ? `<span class="text-[11px] text-slate-500 italic">등록된 인원이 없습니다.</span>` 
-                : members.map((m, idx) => `
-                    <div class="inline-flex items-center bg-slate-800/90 border border-slate-700/80 rounded-lg px-2 py-1 gap-1.5">
-                      <span class="font-medium text-slate-200">${escapeHtml(m.name)}</span>${m.memo ? `<span class="text-[10px] text-slate-400">(${escapeHtml(m.memo)})</span>` : ''}
-                      <select onchange="updateSessionStatus('${escapeHtml(currentId)}', '${escapeHtml(m.name)}', this.value, '${escapeHtml(m.memo)}')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] rounded px-1 py-0.5 border-none outline-none cursor-pointer">
-                        <option value="참석" ${m.status === '참석' ? 'selected' : ''}>참석</option>
-                        <option value="불참" ${m.status === '불참' ? 'selected' : ''}>불참</option>
-                        <option value="미정" ${m.status === '미정' ? 'selected' : ''}>미정</option>
-                      </select>
-                      <button onclick="cancelSessionAttendee('${escapeHtml(currentId)}', '${escapeHtml(m.name)}')" class="text-[11px] text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded px-1">✕</button>
-                    </div>
-                    ${idx < members.length - 1 ? `<span class="text-slate-600">,</span>` : ''}
-                  `).join('')
-              }
-            </div>
-          </div>
-        `;
-      });
-      container.innerHTML = html;
-    }
-
-    async function submitVote() {
-      const currentSessionId = document.getElementById("sessionSelect").value;
-      const name = document.getElementById("voteName").value.trim();
-      const status = document.getElementById("voteStatus").value;
-      const memo = document.getElementById("voteMemo").value.trim();
-
-      if (!currentSessionId || !name) {
-        alert("모임 선택 및 이름을 입력하세요.");
-        return;
-      }
-      await sendGASRequest({
-        action: "voteAttendee",
-        sessionId: currentSessionId,
-        name: name,
-        status: status,
-        memo: memo
-      });
-      document.getElementById("voteName").value = '';
-      document.getElementById("voteMemo").value = '';
-    }
-
-    async function updateSessionStatus(sessionId, name, newStatus, memo) {
-      if (!confirm(`[${name}]님의 상태를 '${newStatus}'(으)로 변경하시겠습니까?`)) {
-        renderAttendees();
-        return;
-      }
-      await sendGASRequest({
-        action: "voteAttendee",
-        sessionId: sessionId,
-        name: name,
-        status: newStatus,
-        memo: memo
-      });
-    }
-
-    async function cancelSessionAttendee(sessionId, name) {
-      if (!confirm(`[${name}]님의 참석 정보를 취소하시겠습니까?`)) return;
-      await sendGASRequest({
-        action: "cancelAttendee",
-        sessionId: sessionId,
-        name: name
-      });
-    }
-
-    // ========================================================
-    // 공통 유틸 함수
-    // ========================================================
-    async function sendGASRequest(payload) {
-      try {
-        const res = await fetch(GAS_WEB_APP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload),
-          redirect: "follow"
+        const sDateObj = new Date(session.dateTime);
+        const timeStr = isNaN(sDateObj.getTime()) ? session.dateTime : sDateObj.toLocaleTimeString('ko-KR', {
+          hour: '2-digit', minute: '2-digit'
         });
-        const result = await res.json();
-        if (result.success) {
-          await fetchData();
-        } else {
-          alert("실패: " + (result.message || result.error));
-        }
-      } catch (err) {
-        console.error("요청 오류:", err);
-        alert("서버 통신 오류가 발생했습니다.");
-      }
-    }
 
-    function escapeHtml(str) {
-      return String(str || '').replace(/[&<>"']/g, m => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      })[m]);
+        return `
+          <div class="race-card">
+            <h2 class="race-card-title" style="margin-bottom:12px;">${escapeHtml(session.title)}</h2>
+            <div class="meta-grid">
+              <div class="meta-item"><strong>시간</strong> ⏰ ${timeStr}</div>
+              <div class="meta-item"><strong>장소</strong> 📍 ${escapeHtml(session.location)}</div>
+              <div class="meta-item"><strong>페이스</strong> ⚡ ${escapeHtml(session.pace)}</div>
+              ${session.notice ? `<div class="meta-item"><strong>공지</strong> 📢 ${escapeHtml(session.notice)}</div>` : ''}
+            </div>
+
+            <!-- 참가 신청 폼 -->
+            <div class="vote-panel">
+              <h4>내 훈련 참가 등록 / 변경</h4>
+              <div class="vote-inputs">
+                <div class="input-row" style="grid-template-columns: 1.2fr 1fr;">
+                  <input type="text" id="name-${session.id}" placeholder="이름 (닉네임)" required>
+                  <select id="status-${session.id}">
+                    <option value="attend">🏃 참석</option>
+                    <option value="absent">👋 불참</option>
+                  </select>
+                </div>
+                <input type="text" id="memo-${session.id}" placeholder="한줄 메모 (예: 5K만 달림)">
+                <button class="btn-submit-vote" onclick="submitSessionVote('${session.id}')">훈련 참석 정보 저장</button>
+              </div>
+            </div>
+
+            <!-- ★ 훈련 모임 참가자/불참자 분리 필드 ★ -->
+            <div class="roster-grid">
+              <div class="roster-section attend-box">
+                <div class="roster-title attend">
+                  <span>🏃 참석자 명단</span>
+                  <span>${attendList.length}명</span>
+                </div>
+                <div class="roster-list">
+                  ${attendList.length === 0 ? `<div class="empty-roster-msg">등록된 참석자가 없습니다.</div>` : ''}
+                  ${attendList.map(a => `
+                    <div class="roster-item">
+                      <div class="roster-left">
+                        <span class="roster-name">${escapeHtml(a.name)}</span>${a.memo ? `<span class="roster-memo">"${escapeHtml(a.memo)}"</span>` : ''}
+                      </div>
+                      <button class="btn-cancel" onclick="cancelSessionVote('${session.id}', '${escapeHtml(a.name)}')">취소</button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="roster-section absent-box">
+                <div class="roster-title absent">
+                  <span>👋 불참자 명단</span>
+                  <span>${absentList.length}명</span>
+                </div>
+                <div class="roster-list">
+                  ${absentList.length === 0 ? `<div class="empty-roster-msg">등록된 불참자가 없습니다.</div>` : ''}
+                  ${absentList.map(a => `
+                    <div class="roster-item">
+                      <div class="roster-left">
+                        <span class="roster-name">${escapeHtml(a.name)}</span>${a.memo ? `<span class="roster-memo">"${escapeHtml(a.memo)}"</span>` : ''}
+                      </div>
+                      <button class="btn-cancel" onclick="cancelSessionVote('${session.id}', '${escapeHtml(a.name)}')">취소</button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
     }
-  </script>
+  }
+
+  // 대회 참가 투표
+  async function submitRaceVote(raceId) {
+    const name = document.getElementById(`name-${raceId}`).value.trim();
+    const course = document.getElementById(`course-${raceId}`).value;
+    const status = document.getElementById(`status-${raceId}`).value;
+    const memo = document.getElementById(`memo-${raceId}`).value.trim();
+
+    if (!name) { alert('이름을 입력해 주세요.'); return; }
+
+    try {
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'voteRaceAttendee',
+          raceId: raceId,
+          name: name,
+          selectedCourse: course,
+          status: status,
+          memo: memo
+        })
+      });
+      document.getElementById(`memo-${raceId}`).value = '';
+      await loadData();
+    } catch (err) {
+      alert('참가 등록 중 오류가 발생했습니다: ' + err);
+    }
+  }
+
+  // 대회 참가 취소
+  async function cancelRaceVote(raceId, name) {
+    if (!confirm(`'${name}' 님의 등록 내역을 취소하시겠습니까?`)) return;
+
+    try {
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'cancelRaceAttendee',
+          raceId: raceId,
+          name: name
+        })
+      });
+      await loadData();
+    } catch (err) {
+      alert('취소 처리 실패: ' + err);
+    }
+  }
+
+  // 훈련 세션 투표
+  async function submitSessionVote(sessionId) {
+    const name = document.getElementById(`name-${sessionId}`).value.trim();
+    const status = document.getElementById(`status-${sessionId}`).value;
+    const memo = document.getElementById(`memo-${sessionId}`).value.trim();
+
+    if (!name) { alert('이름을 입력해 주세요.'); return; }
+
+    try {
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'voteAttendee',
+          sessionId: sessionId,
+          name: name,
+          status: status,
+          memo: memo
+        })
+      });
+      document.getElementById(`memo-${sessionId}`).value = '';
+      await loadData();
+    } catch (err) {
+      alert('저장 실패: ' + err);
+    }
+  }
+
+  // 훈련 세션 취소
+  async function cancelSessionVote(sessionId, name) {
+    if (!confirm(`'${name}' 님의 등록 내역을 취소하시겠습니까?`)) return;
+
+    try {
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'cancelAttendee',
+          sessionId: sessionId,
+          name: name
+        })
+      });
+      await loadData();
+    } catch (err) {
+      alert('취소 실패: ' + err);
+    }
+  }
+
+  // 대회 등록
+  async function handleCreateRace(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveRace');
+    btn.disabled = true;
+    btn.innerText = '저장 중...';
+
+    const dVal = document.getElementById('newRaceDate').value;
+    const hVal = document.getElementById('newRaceHour').value;
+    const mVal = document.getElementById('newRaceMinute').value;
+
+    const newRace = {
+      id: 'race_' + Date.now(),
+      title: document.getElementById('newRaceTitle').value,
+      dateTime: `${dVal} ${hVal}:${mVal}`,
+      location: document.getElementById('newRaceLocation').value,
+      course: document.getElementById('newRaceCourse').value,
+      fee: document.getElementById('newRaceFee').value,
+      homepage: document.getElementById('newRaceHomepage').value
+    };
+
+    try {
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'createRace', race: newRace })
+      });
+      closeCreateModal();
+      document.getElementById('createRaceForm').reset();
+      selectedDateStr = dVal;
+      await loadData();
+    } catch (err) {
+      alert('대회 등록 실패: ' + err);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '스프레드시트에 등록';
+    }
+  }
+
+  function changeMonth(delta) {
+    currentNavDate.setMonth(currentNavDate.getMonth() + delta);
+    renderCalendar();
+  }
+
+  function goToday() {
+    currentNavDate = new Date();
+    selectedDateStr = formatDateKey(new Date());
+    renderCalendar();
+    renderSelectedDateDetails();
+  }
+
+  function openCreateModal(presetDate) {
+    const hourSelect = document.getElementById('newRaceHour');
+    hourSelect.innerHTML = '';
+    for (let h = 6; h <= 18; h++) {
+      const hStr = String(h).padStart(2, '0');
+      const opt = document.createElement('option');
+      opt.value = hStr;
+      opt.textContent = `${hStr}시`;
+      if (h === 8) opt.selected = true;
+      hourSelect.appendChild(opt);
+    }
+    document.getElementById('newRaceDate').value = presetDate || selectedDateStr;
+    document.getElementById('createRaceModal').classList.add('active');
+  }
+
+  function closeCreateModal() {
+    document.getElementById('createRaceModal').classList.remove('active');
+  }
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  renderCalendar();
+  loadData();
+</script>
+
 </body>
 </html>
